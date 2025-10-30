@@ -1,0 +1,4 @@
+.bot_state.json
+.env
+getid.py
+__pycache__/
