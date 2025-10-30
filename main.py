@@ -9,6 +9,7 @@ from telegram.constants import ParseMode
 from telegram.ext import Application, CommandHandler, ContextTypes
 import os, json
 from typing import Optional
+from telegram.constants import ParseMode
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATE_FILE = os.path.join(BASE_DIR, "bot_state.json")
@@ -203,15 +204,27 @@ async def send_lineups_reminder(context: ContextTypes.DEFAULT_TYPE) -> None:
 
 # ----------------- Comandi utili -----------------
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text(
-        "Ciao! Pianificherò un promemoria 30' prima della prossima giornata di Serie A. "
-        "Usa /status per i dettagli."
-    )
+   await send_text_safe(
+    update, 
+    context, 
+    "Ciao! Pianificherò un promemoria 30' prima della prossima giornata di Serie A. "
+    "Usa /status per i dettagli."
+)
 
 async def chatid(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     cid = update.effective_chat.id
-    await update.message.reply_text(f"Chat ID: `{cid}`", parse_mode=ParseMode.MARKDOWN)
+    await send_text_safe(update, context, f"Chat ID: `{cid}`")
 
+
+async def send_text_safe(update: Update, context: ContextTypes.DEFAULT_TYPE, text: str):
+    chat_id = update.effective_chat.id if update and update.effective_chat else GROUP_CHAT_ID
+    await context.bot.send_message(
+        chat_id=chat_id,
+        text=text,
+        parse_mode=ParseMode.MARKDOWN,
+        disable_web_page_preview=True,
+    )
+    
 async def status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     try:
         state = load_state()
@@ -229,14 +242,14 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                              if m.get("matchday") is not None and int(m["matchday"]) > last_md})
 
         if not future_mds:
-            await update.message.reply_text(" Nessuna giornata futura trovata.")
+            await send_text_safe(update, context, "Nessuna giornata futura trovata.")
             return
 
         next_md = future_mds[0]
 
         first_kickoff = fetch_first_kickoff_for_md(next_md)
         if not first_kickoff:
-            await update.message.reply_text(f"Giornata {next_md} trovata, ma nessun kickoff disponibile.")
+            await send_text_safe(update, context, f"Giornata {next_md} trovata, ma nessun kickoff disponibile.")
             return
 
         notify_utc = first_kickoff - timedelta(minutes=30)
@@ -244,17 +257,19 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         kickoff_local = first_kickoff.astimezone(TZ_LOCAL).strftime("%A %d %B %Y, %H:%M")
         notify_local = notify_utc.astimezone(TZ_LOCAL).strftime("%A %d %B %Y, %H:%M")
 
-        await update.message.reply_text(
-            f" *Questo è lo stato di AngeloRanieriBot*\n\n"
-            f" Ultima giornata notificata: *{last_md}*\n"
-            f" Prossima giornata: *{next_md}*\n"
-            f" Orario d'inizio della prima partita: *{kickoff_local}*\n"
-            f" Angelo ti avviserà: *{notify_local}*\n",
-            parse_mode="Markdown"
-        )
+        await send_text_safe(
+    update,
+    context,
+    f" *Questo è lo stato di AngeloRanieriBot*\n\n"
+    f" Ultima giornata notificata: *{last_md}*\n"
+    f" Prossima giornata: *{next_md}*\n"
+    f" Orario d'inizio della prima partita: *{kickoff_local}*\n"
+    f" Angelo ti avviserà: *{notify_local}*\n"
+)
 
     except Exception as e:
-        await update.message.reply_text(f"Errore nel recupero status: {e}")
+        await send_text_safe(update, context, f"Errore nel recupero status: {e}")
+
 
 # chiamata una volta all'avvio per schedulare la prossima giornata
 async def _post_init(app: Application) -> None:
