@@ -1,4 +1,3 @@
-
 # Serie A Telegram Bot
 
 Bot Telegram che invia un promemoria **30 minuti prima della prima partita di ogni giornata di Serie A**, utile per ricordare ai partecipanti del fantacalcio di pubblicare la formazione.

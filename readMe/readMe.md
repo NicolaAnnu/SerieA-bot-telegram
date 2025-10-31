@@ -1,9 +1,3 @@
-Ecco la **versione inglese completa** del tuo README ✅
-Tradotta bene, fluida, corretta e in stile GitHub open-source 👇
-
----
-
-````md
 # Serie A Telegram Bot
 
 A Telegram bot that sends a reminder **30 minutes before the first match of each Serie A matchday** — perfect for reminding fantasy football players to submit their lineup.
@@ -14,7 +8,7 @@ This project is under active development: new features and improvements will be 
 
 ---
 
-## 🚀 Features
+##  Features
 
 - Reminder 30 minutes before the first match of each matchday
 - Automatic scheduling across the full Serie A season
@@ -24,7 +18,7 @@ This project is under active development: new features and improvements will be 
 
 ---
 
-## 🧰 Requirements
+##  Requirements
 
 - Python 3.9+
 - Telegram Bot Token (`@BotFather`)
@@ -33,7 +27,7 @@ This project is under active development: new features and improvements will be 
 
 ---
 
-## 💻 Local Installation
+##  Local Installation
 
 ```bash
 git clone https://github.com/<your-username>/SerieA-bot-telegram.git
@@ -57,7 +51,7 @@ python main.py
 
 ---
 
-## ☁️ Deployment on Railway
+##  Deployment on Railway
 
 1. Connect your GitHub repository to Railway
 2. Set the start command:
@@ -74,11 +68,11 @@ python -u main.py
 | FOOTBALL_DATA_TOKEN | Football-data API key  |
 | GROUP_CHAT_ID       | Telegram group chat ID |
 
-4. Deploy 🎉
+4. Deploy 
 
 ---
 
-## 📁 Main Files
+##  Main Files
 
 | File               | Purpose                         |
 | ------------------ | ------------------------------- |
@@ -89,7 +83,7 @@ python -u main.py
 
 ---
 
-## ⚙️ How it Works
+##  How it Works
 
 * Fetches the next Serie A matchday
 * Detects the first match kickoff
