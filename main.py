@@ -124,16 +124,12 @@ def _fmt_row(row, name_width=18):
     draw = row.get("draw", 0)
     lost = row.get("lost", 0)
     pts = row.get("points", 0)
-    gf = row.get("goalsFor", 0)
-    ga = row.get("goalsAgainst", 0)
-    gd = row.get("goalDifference", 0)
 
     # taglia/padding nome squadra per allineamento
     team = (team[:name_width]).ljust(name_width)
     # DR con segno
-    gd_str = f"{gd:+d}"
 
-    return f"{pos:>2}  {team}  {pts:>3} {played:>3} {won:>3} {draw:>3} {lost:>3}  {gf:>2}:{ga:<2}  {gd_str:>3}"
+    return f"{pos:>2}  {team}  {pts:>3} {played:>3} {won:>3} {draw:>3} {lost:>3}"
 
 def formatta_it(dt):
     dt = dt.astimezone(TZ_LOCAL)
@@ -262,11 +258,12 @@ async def classifica_handler(update, context):
 
         # Intestazione + righe
         header = (
-            "```\n"
-            "Pos  Squadra              Pt   G   V   N   P   GF:GS  DR\n"
-            "--------------------------------------------------------\n"
-            "```"
-        )
+    "```\n"
+    "Pos  Squadra              Pt   G   V   N   P\n"
+    "--------------------------------------------\n"
+    "```"
+)
+
 
         rows = [ _fmt_row(row) for row in table ]
         body = "```\n" + "\n".join(rows) + "\n```"
