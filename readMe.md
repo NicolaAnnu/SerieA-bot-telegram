@@ -1,10 +1,13 @@
 # Serie A Telegram Bot
 
-A Telegram bot that sends a reminder **30 minutes before the first match of each Serie A matchday** — perfect for reminding fantasy football players to submit their lineup.
+A Telegram bot designed for Serie A and Fantacalcio enthusiasts.
+It automatically sends a reminder 30 minutes before the first match of every Serie A matchday, ensuring that participants remember to submit their lineup on time.
 
-The bot runs fully automatically: once a matchday ends, it schedules the next reminder on its own.
+The bot operates completely autonomously: once a matchday ends, it identifies the next one and schedules the upcoming reminder without any manual action.
+In addition to notifications, the bot now offers useful interactive commands, allowing users to check the status of the next matchday and reminder time, view the full Serie A standings, and request the match schedule of any gameweek simply by typing /partiteX (for example, /partite10 to see matchday 10 fixtures).
+A dedicated /comandi menu is also available, displaying all supported commands in a convenient format.
 
-This project is under active development: new features and improvements will be added regularly.
+This project is actively maintained and continuously evolving, with new features and improvements being introduced on a regular basis.
 
 ---
 
@@ -94,11 +97,17 @@ python -u main.py
 
 ##  Bot Commands
 
-| Command   | Description                             |
-| --------- | --------------------------------------- |
-| `/start`  | Welcome message                         |
-| `/status` | Shows the next scheduled notification   |
-| `/chatid` | Retrieves chat ID (local helper script not shareable) |
+## Bot Commands
+
+| Command       | Description                                      |
+| ------------- | ------------------------------------------------ |
+| `/start`      | Welcome message                                  |
+| `/status`     | Shows the next scheduled notification            |
+| `/chatid`     | Retrieves Chat ID (separate non-shareable script)|
+| `/classifica` | Displays the current Serie A standings           |
+| `/partiteX`   | Shows the matches for matchday X                 |
+| `/comandi`    | Shows available commands                         |
+
 
 ---
 

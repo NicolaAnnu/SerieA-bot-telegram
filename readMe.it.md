@@ -1,10 +1,13 @@
 # Serie A Telegram Bot
 
-Bot Telegram che invia un promemoria **30 minuti prima della prima partita di ogni giornata di Serie A**, utile per ricordare ai partecipanti del fantacalcio di pubblicare la formazione.
+Un bot Telegram pensato per gli appassionati di Serie A e Fantacalcio.
+Invia automaticamente un promemoria 30 minuti prima della prima partita di ogni giornata di Serie A, così nessuno dimentica di inserire la formazione in tempo.
 
-Il bot funziona in automatico: appena finisce una giornata, pianifica da solo il prossimo avviso
+Il bot funziona in totale autonomia: una volta terminata una giornata, riconosce quella successiva e programma da solo il prossimo avviso, senza bisogno di interventi manuali.
+Oltre ai promemoria, mette a disposizione diversi comandi utili per consultare rapidamente informazioni sulla stagione: è possibile controllare lo stato del bot e la prossima notifica, visualizzare la classifica aggiornata della Serie A, e ottenere il calendario delle partite di qualsiasi giornata semplicemente digitando /partiteX (ad esempio /partite10 per vedere le partite della 10ª giornata).
+In aggiunta, il comando /comandi consente di visualizzare rapidamente tutte le funzionalità disponibili.
 
-Questo progetto è in sviluppo attivo: nuove funzionalità e miglioramenti verranno aggiunti
+Il progetto è in costante aggiornamento: nuove funzioni e miglioramenti verranno aggiunti regolarmente per rendere il bot sempre più completo e utile.
 
 ---
 
@@ -98,6 +101,9 @@ python -u main.py
 | `/start`  | Messaggio di benvenuto             |
 | `/status` | Mostra prossima notifica           |
 | `/chatid` | Recupera Chat ID (script separato non condivisibile) |
+| `/classifica` | Mostra la classifica attuale di Serie A           |
+| `/partiteX` | Mostra le partite della giornata X           |
+| `/comandi` | Mostra i comandi disponibili           |
 
 ---
 
