@@ -56,7 +56,7 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 FOOTBALL_DATA_TOKEN = os.getenv("FOOTBALL_DATA_TOKEN")
 GROUP_CHAT_ID = int(os.getenv("GROUP_CHAT_ID", "0"))
 
-# Europe/Rome per orari umani
+# Europe/Rome
 TZ_LOCAL = ZoneInfo("Europe/Rome")
 
 # Logging base
@@ -75,7 +75,7 @@ def fetch_first_kickoff_for_md(md: int) -> Optional[datetime]:
     """
     url = "https://api.football-data.org/v4/competitions/SA/matches"
     headers = {"X-Auth-Token": FOOTBALL_DATA_TOKEN}
-    params = {"matchday": md}  # niente 'status' -> tutte le partite della giornata
+    params = {"matchday": md}
     r = requests.get(url, headers=headers, params=params, timeout=20)
     r.raise_for_status()
     data = r.json()
@@ -102,14 +102,13 @@ def fetch_standings_SA():
     r = requests.get(url, headers=headers, timeout=20)
     r.raise_for_status()
     data = r.json()
-
-    # Trova la standing 'TOTAL' (classifica complessiva)
+    
     standings = data.get("standings", [])
     total = next((s for s in standings if s.get("type") == "TOTAL"), None)
     if not total:
         return []
 
-    return total.get("table", [])  # lista di team rows
+    return total.get("table", [])
 
 
 def _fmt_row(row, name_width=18):
@@ -125,9 +124,7 @@ def _fmt_row(row, name_width=18):
     lost = row.get("lost", 0)
     pts = row.get("points", 0)
 
-    # taglia/padding nome squadra per allineamento
     team = (team[:name_width]).ljust(name_width)
-    # DR con segno
 
     return f"{pos:>2}  {team}  {pts:>3} {played:>3} {won:>3} {draw:>3} {lost:>3}"
 
@@ -161,10 +158,9 @@ async def schedule_next_round(app: Application) -> None:
     """
     try:
         state = load_state()
-        last_md = int(state.get("last_notified_matchday", 0))  # es.: 8 => prossima candidabile è 9
+        last_md = int(state.get("last_notified_matchday", 0))
         now_utc = datetime.now(timezone.utc)
 
-        # 1) Trova la prossima giornata con partite future (usiamo SCHEDULED solo per sapere quali MD esistono nel futuro)
         url = "https://api.football-data.org/v4/competitions/SA/matches"
         headers = {"X-Auth-Token": FOOTBALL_DATA_TOKEN}
         params = {"status": "SCHEDULED"}
@@ -174,7 +170,6 @@ async def schedule_next_round(app: Application) -> None:
 
         future_mds = sorted({int(m["matchday"]) for m in data.get("matches", [])
                              if m.get("matchday") is not None and 1 <= int(m["matchday"]) <= 38})
-        # Filtra solo quelle > last_md
         future_mds = [md for md in future_mds if md > last_md]
 
         if not future_mds:
@@ -182,7 +177,6 @@ async def schedule_next_round(app: Application) -> None:
             app.job_queue.run_once(check_and_schedule, when=timedelta(days=1))
             return
 
-        # 2) Scorri le giornate candidate finché non trovi una con 'primo kickoff' ancora utile
         planned = False
         for md in future_mds:
             first_kickoff = fetch_first_kickoff_for_md(md)
@@ -193,7 +187,6 @@ async def schedule_next_round(app: Application) -> None:
             notify_utc = first_kickoff - timedelta(minutes=30)
 
             if now_utc >= first_kickoff:
-                # il PRIMO match della giornata è già iniziato → questa giornata NON va notificata
                 logger.info("MD%s: primo kickoff %s già iniziato. Marco come notificata e passo oltre.",
                             md, first_kickoff.isoformat())
                 state["last_notified_matchday"] = md
@@ -201,14 +194,12 @@ async def schedule_next_round(app: Application) -> None:
                 continue
 
             if now_utc >= notify_utc:
-                # finestra T-30' già passata ma primo kickoff non è ancora iniziato → NON notificare (regola tua)
                 logger.info("MD%s: finestra T-30' (%s) già passata. Salto giornata e passo oltre.",
                             md, notify_utc.isoformat())
                 state["last_notified_matchday"] = md
                 save_state(state)
                 continue
 
-            # 3) Pianifica T-30' del PRIMO match della giornata md
             for job in app.job_queue.get_jobs_by_name("md_notify"):
                 job.schedule_removal()
 
@@ -235,10 +226,9 @@ async def schedule_next_round(app: Application) -> None:
 
 
             planned = True
-            break  # abbiamo pianificato: fermati qui
+            break
 
         if not planned:
-            # Tutte le giornate future hanno 'primo kickoff' con finestra T-30' già passata → riprova fra poco
             logger.info("Nessuna MD pianificabile (finestra già passata). Nuovo check tra 2 ore.")
             app.job_queue.run_once(check_and_schedule, when=timedelta(hours=2))
 
@@ -256,7 +246,6 @@ async def classifica_handler(update, context):
             await send_text_safe(update, context, "Classifica non disponibile al momento.")
             return
 
-        # Intestazione + righe
         header = (
     "```\n"
     "Pos  Squadra              Pt   G   V   N   P\n"
@@ -272,7 +261,6 @@ async def classifica_handler(update, context):
         await send_text_safe(update, context, msg)
 
     except requests.HTTPError as e:
-        # gestione rate-limit 429 o altri errori HTTP dell'API
         await send_text_safe(update, context, f"Errore API classifica: {e}")
         logger.exception("HTTPError classifica: %s", e)
     except Exception as e:
@@ -283,12 +271,10 @@ async def partite_handler(update, context):
     try:
         text = (update.message.text or "").strip()
 
-        # 1) /partite10 (senza spazio)
         m = re.match(r"^/partite(\d{1,2})\b", text)
         if m:
             md = int(m.group(1))
         else:
-            # 2) /partite 10 (con argomento)
             if context.args and len(context.args) >= 1 and context.args[0].isdigit():
                 md = int(context.args[0])
             else:
@@ -304,7 +290,7 @@ async def partite_handler(update, context):
             await send_text_safe(update, context, f"Nessuna partita trovata per la giornata {md}.")
             return
 
-        # costruisci lista
+        # lista
         righe = [f"*Calendario Serie A — Giornata {md}*"]
         for match in matches:
             utc = match.get("utcDate")
@@ -354,7 +340,7 @@ async def send_lineups_reminder(context: ContextTypes.DEFAULT_TYPE) -> None:
     save_state(state)
     logger.info(f"MD{md} registrata come notificata ")
 
-    # ⏭️ Pianifica la prossima giornata
+    # Pianifica la prossima giornata
     await schedule_next_round(context.application)
 
 
@@ -415,13 +401,13 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
         notify_utc = first_kickoff - timedelta(minutes=30)
 
-# kickoff locale
+        # kickoff locale
         dt_k = first_kickoff.astimezone(TZ_LOCAL)
         day_k = giorni[dt_k.strftime("%A")]
         month_k = mesi[dt_k.strftime("%B")]
         kickoff_local = f"{day_k} {dt_k.strftime('%d')} {month_k} {dt_k.strftime('%Y, %H:%M')}"
 
-# notifica locale
+        # notifica locale
         dt_n = notify_utc.astimezone(TZ_LOCAL)
         day_n = giorni[dt_n.strftime("%A")]
         month_n = mesi[dt_n.strftime("%B")]
