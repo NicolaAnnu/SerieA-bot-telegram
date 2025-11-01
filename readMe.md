@@ -107,12 +107,7 @@ python -u main.py
 Contributions are welcome!
 Feel free to open an **issue** or submit a **pull request**.
 
----
 
-## 📬 Contact
 
-Telegram: `@yourUsername`
 
----
-
-##  Enjoy your fantasy football — and Forza Serie A! 🇮🇹
+# Enjoy your fantasy football — and Forza Serie A! 🇮🇹

@@ -106,11 +106,6 @@ python -u main.py
 Contributi e miglioramenti sono benvenuti!
 Apri una **issue** o una **pull request**.
 
----
-
-##  Contatti
-
-Telegram: `@tuoUsername`
 
 
-##  Buon fantacalcio e forza Serie A!
+#  Buon fantacalcio e forza Serie A!
