@@ -1,7 +1,7 @@
 # Serie A Telegram Bot
 
 A Telegram bot designed for Serie A and Fantacalcio enthusiasts.
-It automatically sends a reminder 30 minutes before the first match of every Serie A matchday, ensuring that participants remember to submit their lineup on time.
+It automatically sends a reminder 60 minutes before the first match of every Serie A matchday, ensuring that participants remember to submit their lineup on time.
 
 The bot operates completely autonomously: once a matchday ends, it identifies the next one and schedules the upcoming reminder without any manual action.
 In addition to notifications, the bot now offers useful interactive commands, allowing users to check the status of the next matchday and reminder time, view the full Serie A standings, and request the match schedule of any gameweek simply by typing /partiteX (for example, /partite10 to see matchday 10 fixtures).
@@ -13,7 +13,7 @@ This project is actively maintained and continuously evolving, with new features
 
 ##  Features
 
-- Reminder 30 minutes before the first match of each matchday
+- Reminder 60 minutes before the first match of each matchday
 - Automatic scheduling across the full Serie A season
 - Works in Telegram groups
 - `/status` command to check the next notification
@@ -90,7 +90,7 @@ python -u main.py
 
 * Fetches the next Serie A matchday
 * Detects the first match kickoff
-* Schedules a reminder 30 minutes earlier
+* Schedules a reminder 60 minutes earlier
 * After sending, automatically prepares the next matchday
 
 ---
