@@ -153,8 +153,8 @@ async def schedule_next_round(app: Application) -> None:
     Notifica UNA SOLA VOLTA per giornata:
     - Trova la prossima giornata con MD > last_notified_matchday.
     - Calcola il PRIMO calcio d'inizio di quella giornata (anche se alcune partite sono già finite).
-    - Se la finestra 30' prima è già passata (o la partita è iniziata), marca la giornata e passa oltre.
-    - Altrimenti pianifica la notifica esattamente a T-30'.
+    - Se la finestra 60' prima è già passata (o la partita è iniziata), marca la giornata e passa oltre.
+    - Altrimenti pianifica la notifica esattamente a T-60'.
     """
     try:
         state = load_state()
@@ -184,7 +184,7 @@ async def schedule_next_round(app: Application) -> None:
                 logger.info("MD%s non ha partite (API). Continuo con la successiva.", md)
                 continue
 
-            notify_utc = first_kickoff - timedelta(minutes=30)
+            notify_utc = first_kickoff - timedelta(minutes=60)
 
             if now_utc >= first_kickoff:
                 logger.info("MD%s: primo kickoff %s già iniziato. Marco come notificata e passo oltre.",
@@ -194,7 +194,7 @@ async def schedule_next_round(app: Application) -> None:
                 continue
 
             if now_utc >= notify_utc:
-                logger.info("MD%s: finestra T-30' (%s) già passata. Salto giornata e passo oltre.",
+                logger.info("MD%s: finestra T-60' (%s) già passata. Salto giornata e passo oltre.",
                             md, notify_utc.isoformat())
                 state["last_notified_matchday"] = md
                 save_state(state)
@@ -318,7 +318,7 @@ async def send_lineups_reminder(context: ContextTypes.DEFAULT_TYPE) -> None:
     text = (
         f"Salve sono Angelo Ranieri il bot, sono qui per ricordarvi che\n"
         f"bisogna pubblicare la FORMAZIONE!!\n"
-        f"Tra 30 minuti inizia la *Giornata {md}* di Serie A "
+        f"Tra un'ora inizia la *Giornata {md}* di Serie A "
         f"(primo calcio d'inizio: *{kickoff_local}*).\n\n"
         f"Pubblicate la formazione ora! "
     )
@@ -348,7 +348,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
    await send_text_safe(
     update, 
     context, 
-    "Ciao! Pianificherò un promemoria 30' prima della prossima giornata di Serie A. "
+    "Ciao! Pianificherò un promemoria un'ora' prima della prossima giornata di Serie A. "
     "Usa /status per i dettagli."
 )
 async def partitedefault(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -399,7 +399,7 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             await send_text_safe(update, context, f"Giornata {next_md} trovata, ma nessun kickoff disponibile.")
             return
 
-        notify_utc = first_kickoff - timedelta(minutes=30)
+        notify_utc = first_kickoff - timedelta(minutes=60)
 
         # kickoff locale
         dt_k = first_kickoff.astimezone(TZ_LOCAL)
