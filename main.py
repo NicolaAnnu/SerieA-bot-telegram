@@ -156,6 +156,7 @@ async def schedule_next_round(app: Application) -> None:
     - Se la finestra 60' prima è già passata (o la partita è iniziata), marca la giornata e passa oltre.
     - Altrimenti pianifica la notifica esattamente a T-60'.
     """
+
     try:
         state = load_state()
         last_md = int(state.get("last_notified_matchday", 0))
@@ -168,12 +169,17 @@ async def schedule_next_round(app: Application) -> None:
         r.raise_for_status()
         data = r.json()
 
-        future_mds = sorted({int(m["matchday"]) for m in data.get("matches", [])
-                             if m.get("matchday") is not None and 1 <= int(m["matchday"]) <= 38})
+        future_mds = sorted({
+            int(m["matchday"]) for m in data.get("matches", [])
+            if m.get("matchday") is not None and 1 <= int(m["matchday"]) <= 38
+        })
         future_mds = [md for md in future_mds if md > last_md]
 
         if not future_mds:
-            logger.info("Nessuna giornata futura oltre MD%s. Riprovo tra 1 giorno.", last_md)
+            logger.info(
+                "Nessuna giornata futura oltre MD%s. Riprovo tra 1 giorno.",
+                last_md
+            )
             app.job_queue.run_once(check_and_schedule, when=timedelta(days=1))
             return
 
@@ -184,57 +190,90 @@ async def schedule_next_round(app: Application) -> None:
                 logger.info("MD%s non ha partite (API). Continuo con la successiva.", md)
                 continue
 
-            notify_utc = first_kickoff - timedelta(minutes=60)
+            notify_utc1day = first_kickoff - timedelta(days=1)       # 24 ore prima
+            notify_utc = first_kickoff - timedelta(minutes=60)       # 1 ora prima
 
+            # Se il primo kickoff è già iniziato → salta
             if now_utc >= first_kickoff:
-                logger.info("MD%s: primo kickoff %s già iniziato. Marco come notificata e passo oltre.",
-                            md, first_kickoff.isoformat())
+                logger.info(
+                    "MD%s: primo kickoff %s già iniziato. Marco come notificata e passo oltre.",
+                    md,
+                    first_kickoff.isoformat(),
+                )
                 state["last_notified_matchday"] = md
                 save_state(state)
                 continue
 
+            # Se la finestra T-60' è passata → salta
             if now_utc >= notify_utc:
-                logger.info("MD%s: finestra T-60' (%s) già passata. Salto giornata e passo oltre.",
-                            md, notify_utc.isoformat())
+                logger.info(
+                    "MD%s: finestra T-60' (%s) già passata. Salto giornata e passo oltre.",
+                    md,
+                    notify_utc.isoformat(),
+                )
                 state["last_notified_matchday"] = md
                 save_state(state)
                 continue
 
+            # 3) Pulisci job precedenti
             for job in app.job_queue.get_jobs_by_name("md_notify"):
                 job.schedule_removal()
 
+            for job in app.job_queue.get_jobs_by_name("md_notify_24h"):
+                job.schedule_removal()
+
+            # 4) Notifica 1 ora prima
             app.job_queue.run_once(
                 send_lineups_reminder,
                 when=notify_utc,
                 name="md_notify",
                 data={"matchday": md, "kickoff_utc": first_kickoff},
             )
-            
-            dt_k = first_kickoff.astimezone(TZ_LOCAL)
-            day_k = giorni[dt_k.strftime("%A")]
-            month_k = mesi[dt_k.strftime("%B")]
-            local_kick = f"{day_k} {dt_k.strftime('%d')} {month_k} {dt_k.strftime('%Y, %H:%M')}"
 
-            dt_n = notify_utc.astimezone(TZ_LOCAL)
-            day_n = giorni[dt_n.strftime("%A")]
-            month_n = mesi[dt_n.strftime("%B")]
-            local_notify = f"{day_n} {dt_n.strftime('%d')} {month_n} {dt_n.strftime('%Y, %H:%M')}"
+            # 5) Notifica 24h prima (solo se ancora futura)
+            if now_utc < notify_utc1day:
+                app.job_queue.run_once(
+                    send_lineups_reminder_24h,
+                    when=notify_utc1day,
+                    name="md_notify_24h",
+                    data={"matchday": md, "kickoff_utc": first_kickoff},
+                )
 
-            logger.info( "Pianificata NOTIFICA (una sola) per MD%s alle %s (local). Primo kickoff: %s (local).",
-                        md, local_notify, local_kick
-)
+                dt_k = first_kickoff.astimezone(TZ_LOCAL)
+                day_k = giorni[dt_k.strftime("%A")]
+                month_k = mesi[dt_k.strftime("%B")]
+                local_kick = (
+                    f"{day_k} {dt_k.strftime('%d')} {month_k} "
+                    f"{dt_k.strftime('%Y, %H:%M')}"
+                )
 
+                dt_n = notify_utc.astimezone(TZ_LOCAL)
+                day_n = giorni[dt_n.strftime("%A")]
+                month_n = mesi[dt_n.strftime("%B")]
+                local_notify = (
+                    f"{day_n} {dt_n.strftime('%d')} {month_n} "
+                    f"{dt_n.strftime('%Y, %H:%M')}"
+                )
 
-            planned = True
-            break
+                logger.info(
+                    "Pianificata NOTIFICA (una sola) per MD%s alle %s (local). "
+                    "Primo kickoff: %s (local).",
+                    md, local_notify, local_kick
+                )
+
+                planned = True
+                break
 
         if not planned:
-            logger.info("Nessuna MD pianificabile (finestra già passata). Nuovo check tra 2 ore.")
+            logger.info(
+                "Nessuna MD pianificabile (finestra già passata). Nuovo check tra 2 ore."
+            )
             app.job_queue.run_once(check_and_schedule, when=timedelta(hours=2))
 
     except Exception as e:
         logger.exception("Errore nel planning: %s", e)
         app.job_queue.run_once(check_and_schedule, when=timedelta(hours=2))
+
 
 async def check_and_schedule(context: ContextTypes.DEFAULT_TYPE) -> None:
     await schedule_next_round(context.application)
@@ -320,7 +359,7 @@ async def send_lineups_reminder(context: ContextTypes.DEFAULT_TYPE) -> None:
         f"bisogna pubblicare la FORMAZIONE!!\n"
         f"Tra un'ora inizia la *Giornata {md}* di Serie A "
         f"(primo calcio d'inizio: *{kickoff_local}*).\n\n"
-        f"Pubblicate la formazione ora! "
+        f"Pubblicate la formazione ora! @NickNapoli22 "
     )
 
     try:
@@ -342,6 +381,33 @@ async def send_lineups_reminder(context: ContextTypes.DEFAULT_TYPE) -> None:
 
     # Pianifica la prossima giornata
     await schedule_next_round(context.application)
+
+
+async def send_lineups_reminder_24h(context: ContextTypes.DEFAULT_TYPE) -> None:
+    data = context.job.data or {}
+    md = int(data.get("matchday"))
+    kickoff_utc = data.get("kickoff_utc")
+
+    # Orario del primo kickoff in timezone locale
+    kickoff_local = kickoff_utc.astimezone(TZ_LOCAL).strftime("%d/%m %H:%M")
+
+    text = (
+        f"Salve sono Angelo Ranieri il bot, sono qui per ricordarvi che\n"
+        f"domani inizia la *Giornata {md}* di Serie A "
+        f"(primo calcio d'inizio: *{kickoff_local}*).\n\n"
+        f"Preparate e pubblicate la FORMAZIONE entro domani! @NickNapoli22 "
+    )
+
+    try:
+        await context.bot.send_message(
+            chat_id=GROUP_CHAT_ID,
+            text=text,
+            parse_mode=ParseMode.MARKDOWN,
+            disable_web_page_preview=True,
+        )
+        logger.info(f"Messaggio 24h prima inviato per MD{md}.")
+    except Exception as e:
+        logger.exception("Errore nell'invio del messaggio 24h prima: %s", e)
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -400,6 +466,7 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             return
 
         notify_utc = first_kickoff - timedelta(minutes=60)
+        notify_utc1day = first_kickoff - timedelta(hours=24)
 
         # kickoff locale
         dt_k = first_kickoff.astimezone(TZ_LOCAL)
@@ -408,10 +475,14 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         kickoff_local = f"{day_k} {dt_k.strftime('%d')} {month_k} {dt_k.strftime('%Y, %H:%M')}"
 
         # notifica locale
+        dt_y = notify_utc1day.astimezone(TZ_LOCAL)
         dt_n = notify_utc.astimezone(TZ_LOCAL)
         day_n = giorni[dt_n.strftime("%A")]
+        day_y = giorni[dt_y.strftime("%A")]
         month_n = mesi[dt_n.strftime("%B")]
+        month_y = mesi[dt_y.strftime("%B")]
         notify_local = f"{day_n} {dt_n.strftime('%d')} {month_n} {dt_n.strftime('%Y, %H:%M')}"
+        notify_local1day = f"{day_n} {dt_y.strftime('%d')} {month_y} {dt_y.strftime('%Y, %H:%M')}"
 
 
         await send_text_safe(
@@ -421,7 +492,7 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     f" Ultima giornata notificata: *{last_md}*\n"
     f" Prossima giornata: *{next_md}*\n"
     f" Orario d'inizio della prima partita: *{kickoff_local}*\n"
-    f" Angelo ti avviserà: *{notify_local}*\n"
+    f" Angelo ti avviserà sia: Un giorno prima: *{notify_local1day}* e sia un'ora prima: *{notify_local}*\n"
 )
         
 
