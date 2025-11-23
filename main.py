@@ -482,7 +482,7 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         month_n = mesi[dt_n.strftime("%B")]
         month_y = mesi[dt_y.strftime("%B")]
         notify_local = f"{day_n} {dt_n.strftime('%d')} {month_n} {dt_n.strftime('%Y, %H:%M')}"
-        notify_local1day = f"{day_n} {dt_y.strftime('%d')} {month_y} {dt_y.strftime('%Y, %H:%M')}"
+        notify_local1day = f"{day_y} {dt_y.strftime('%d')} {month_y} {dt_y.strftime('%Y, %H:%M')}"
 
 
         await send_text_safe(
